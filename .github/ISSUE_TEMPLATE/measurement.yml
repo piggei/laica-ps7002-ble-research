@@ -1,0 +1,139 @@
+name: "Sample measurement / algorithm validation"
+description: "Submit one LAICA/YoHealth weighing to compare the recovered calculations with the app and help validate device compatibility."
+title: "[MEASUREMENT] "
+labels: ["measurement", "validation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping validate the recovered YoHealth/LAICA algorithm and its compatibility across scale models.
+
+        Please submit **one complete weighing per issue** when possible. Do not include your name, exact date of birth, account identifiers, or other identifying health information. Age in years is sufficient for the calculations.
+
+        If you prefer not to disclose a profile field, say so. Protocol-level validation can still be useful even when some body-composition formulas cannot be reproduced.
+
+  - type: input
+    id: device_model
+    attributes:
+      label: Scale model
+      description: Exact manufacturer and model printed on the scale or in the app.
+      placeholder: "e.g. LAICA PS7002, LAICA PS7200L, ..."
+    validations:
+      required: true
+
+  - type: input
+    id: app
+    attributes:
+      label: App and version
+      description: App used to display the reference body-composition values.
+      placeholder: "LAICA Home Wellness / version ..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: profile_sex
+    attributes:
+      label: Sex selected in the app profile
+      description: Needed to reproduce the sex-specific formulas. Choose "Not disclosed" if you prefer.
+      options:
+        - Male
+        - Female
+        - Not disclosed
+    validations:
+      required: true
+
+  - type: input
+    id: profile_age
+    attributes:
+      label: Age used by the app (years)
+      description: Age in whole years at the time of measurement. Do not enter an exact date of birth.
+      placeholder: "55"
+    validations:
+      required: false
+
+  - type: input
+    id: profile_height
+    attributes:
+      label: Height used by the app (cm)
+      placeholder: "175"
+    validations:
+      required: false
+
+  - type: input
+    id: weight
+    attributes:
+      label: Weight shown by the scale/app (kg)
+      placeholder: "80.7"
+    validations:
+      required: true
+
+  - type: input
+    id: impedance
+    attributes:
+      label: Raw health / impedance value
+      description: Decimal value decoded from bytes 6..7 of the 14-byte NimBLE Manufacturer Data frame, if available.
+      placeholder: "665"
+    validations:
+      required: false
+
+  - type: input
+    id: status
+    attributes:
+      label: Final status byte
+      description: Usually 0x86 for a complete body-composition frame.
+      placeholder: "0x86"
+      value: "0x86"
+    validations:
+      required: false
+
+  - type: input
+    id: raw_mfg
+    attributes:
+      label: Final Manufacturer Data frame
+      description: Paste the complete 14-byte NimBLE Manufacturer Data value if available.
+      placeholder: "02 A1 09 FF 03 27 02 99 86 FF FF 21 15 AA"
+    validations:
+      required: false
+
+  - type: textarea
+    id: app_values
+    attributes:
+      label: Values shown by the app
+      description: Enter every value available. Leave unknown/not displayed fields blank.
+      placeholder: |
+        BMI: 26.35
+        Body fat: 23.28 %
+        Water: 56.00 %
+        Muscle: 38.73 %
+        Bone mass: ... kg
+        BMR: ... kcal/day
+        Body age: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logger_output
+    attributes:
+      label: ESP32 final measurement output
+      description: Paste the complete FINAL MEASUREMENT block from the research firmware if available.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything unusual about the measurement, electrode contact, units, app behavior, or repeated attempts.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Submission checks
+      options:
+        - label: I have removed names, exact dates of birth, account identifiers, and other unnecessary identifying information.
+          required: true
+        - label: This measurement comes from my own device/data or I have permission to share it.
+          required: true

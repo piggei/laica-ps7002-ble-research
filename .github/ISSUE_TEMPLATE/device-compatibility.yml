@@ -1,0 +1,105 @@
+name: "Device compatibility report"
+description: "Report another LAICA/YoHealth or compatible BLE scale and compare its advertising protocol."
+title: "[DEVICE] "
+labels: ["device-compatibility", "validation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to report a different scale model, confirm a known compatible model, or document a protocol variant.
+
+        Raw BLE advertising data is especially useful. Please avoid including unrelated nearby BLE devices or personal identifiers.
+
+  - type: input
+    id: manufacturer
+    attributes:
+      label: Manufacturer / brand
+      placeholder: "LAICA"
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Exact model
+      placeholder: "PS7200L"
+    validations:
+      required: true
+
+  - type: input
+    id: app
+    attributes:
+      label: Companion app and version
+      placeholder: "App name / version"
+    validations:
+      required: false
+
+  - type: input
+    id: ble_name
+    attributes:
+      label: BLE local name
+      placeholder: "YoHealth"
+    validations:
+      required: false
+
+  - type: input
+    id: company_id
+    attributes:
+      label: Manufacturer / Company ID bytes
+      description: If visible in the capture.
+      placeholder: "02 A1"
+    validations:
+      required: false
+
+  - type: input
+    id: known_weight
+    attributes:
+      label: Known displayed weight for the capture (kg)
+      placeholder: "80.7"
+    validations:
+      required: false
+
+  - type: textarea
+    id: advertising
+    attributes:
+      label: BLE advertising / Manufacturer Data samples
+      description: Paste one or more relevant raw frames, preferably including a final stable measurement.
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: protocol_match
+    attributes:
+      label: Does it appear to match the documented YoHealth frame?
+      options:
+        - Yes - same 14-byte NimBLE Manufacturer Data layout
+        - Partially - similar header/layout but some fields differ
+        - No - different protocol
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: observations
+    attributes:
+      label: Observed behavior
+      description: Describe weight encoding, status transitions, impedance/body-composition data, checksum behavior, or any differences from PROTOCOL.md.
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Capture environment
+      description: ESP32 board, scanner version/commit, NimBLE version, or other capture tool used.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I have removed unrelated BLE traffic and unnecessary personal information from the report.
+          required: true

@@ -5,8 +5,9 @@ Copy it to a new file (for example `measurements-2026-09.csv`) and append one ro
 per completed weighing session.
 
 Do not commit personally identifying names or unrelated health records.  The
-project needs only the profile variables used by the algorithm (sex, age,
-height) and the scale/app outputs required to validate formulas.
+project needs only the exact scale model, the profile variables used by the
+algorithm (sex, age, height), and the scale/app outputs required to validate
+formulas. The BLE local name is also useful when testing additional models.
 
 Recommended workflow:
 

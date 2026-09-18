@@ -1,10 +1,24 @@
 # Laica PS7002 BLE Research
 
+<p align="center">
+  <img src="assets/laica-ps7002.png" alt="Laica PS7002 Smart body-composition scale" width="680">
+</p>
+
 Independent reverse-engineering and interoperability research for the **Laica PS7002 Smart** body-composition scale.
 
 The project passively receives the scale's BLE advertising packets, identifies the final body-composition result, decodes weight and the raw YoHealth "health" value, and reproduces the body-composition calculations recovered from the historical YoHealth native library.
 
 > **Status:** research / validation. Weight, BLE framing, checksum, BMI, body-fat %, water % and muscle % are strongly confirmed. BMR and body-age formulas are recovered from the native routine and need broad multi-sample validation. The proposed bone-mass mapping is explicitly experimental.
+
+## Compatibility scope
+
+The **Laica PS7002 Smart** is the reference device for this repository: its BLE frames and app results are being captured and validated directly.
+
+However, this project is deliberately **not limited to the PS7002**. Historical work on the related **Laica PS7200L** points to the same YoHealth protocol family and native calculation routine. We therefore want to determine how widely the same BLE framing and recovered body-composition algorithm are shared across other Laica scales, and whether they are common to most or all models based on the YoHealth platform.
+
+At this stage, compatibility with other models must be treated as **unconfirmed until tested**. A matching BLE name or packet header is useful evidence, but full algorithm compatibility is best demonstrated by comparing a complete body-composition measurement against the companion app.
+
+Reports from other devices are especially welcome. Use the GitHub **Device compatibility report** for a new model, or the **Sample measurement / algorithm validation** form for a complete weighing. Both forms ask for the exact scale model so results can be grouped by device.
 
 ## Why this project exists
 
@@ -42,6 +56,8 @@ This exact agreement is the central validation result of the project so far.
 ├── REFERENCES.md
 ├── LICENSE
 ├── .gitignore
+├── assets/
+│   └── laica-ps7002.png
 ├── firmware/
 │   └── Laica_PS7002_Research/
 │       └── Laica_PS7002_Research.ino
@@ -111,7 +127,9 @@ This provides an independent reference for regression checks and makes it easier
 
 ## Validation campaign
 
-Use `data/measurements-template.csv` to compare ESP32 predictions with the Laica app across many measurements. The most useful fields to report are:
+Use `data/measurements-template.csv` to compare ESP32 predictions with the Laica app across many measurements and, where possible, across different scale models. The most useful fields to report are:
+
+- exact scale model;
 
 - weight;
 - raw impedance;
@@ -150,3 +168,15 @@ Body-composition values from consumer BIA scales are estimates. This project is 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Reporting measurements, compatible devices and bugs
+
+Structured GitHub Issue Forms are included under `.github/ISSUE_TEMPLATE/`.
+
+Choose:
+
+- **Sample measurement / algorithm validation** to contribute a weighing from the PS7002 or another candidate-compatible model and compare the recovered formulas with the companion app;
+- **Device compatibility report** to document another LAICA/YoHealth or related scale;
+- **Bug report** for firmware, parser, calculator or documentation problems.
+
+The measurement form intentionally asks for age in years rather than an exact date of birth and asks contributors not to publish names or other unnecessary identifying information. See [CONTRIBUTING.md](CONTRIBUTING.md).

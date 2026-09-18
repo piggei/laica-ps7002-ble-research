@@ -1,6 +1,6 @@
 # Validation Plan
 
-The goal is to determine whether the recovered YoHealth calculations reproduce the current Laica PS7002 app across multiple real measurements, not only one reference point.
+The first goal is to determine whether the recovered YoHealth calculations reproduce the current Laica PS7002 app across multiple real measurements, not only one reference point. A parallel goal is to test whether the same BLE protocol and calculation algorithm are shared by other LAICA/YoHealth scale models.
 
 ## 1. Keep profile variables identical
 
@@ -106,6 +106,7 @@ Optional protocol tests:
 When returning results for analysis, a compact report like this is ideal:
 
 ```text
+Scale model: LAICA PS7002
 Profile: male, 55, 175 cm
 
 ESP32:
@@ -135,3 +136,9 @@ Raw MFG: ...
 ```
 
 A CSV row from the logger plus the app values is even better.
+
+## 8. Submit a GitHub validation issue
+
+The repository includes a structured **Sample measurement / algorithm validation** issue form. For public validation reports, prefer one complete weighing per issue, always identify the exact scale model, and include the final raw Manufacturer Data frame plus the values shown by the app. Measurements from models other than the PS7002 are especially useful for the compatibility campaign.
+
+Do not publish a name or exact date of birth. Age in whole years is sufficient for reproducing the recovered calculations.

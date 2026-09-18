@@ -1,0 +1,92 @@
+name: "Bug report"
+description: "Report a reproducible problem in the ESP32 research firmware, calculator, documentation, or protocol parser."
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: checkboxes
+    id: existing
+    attributes:
+      label: Existing issues
+      options:
+        - label: I searched the existing issues and did not find the same problem.
+          required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - ESP32 firmware / BLE scanner
+        - YoHealth protocol decoder
+        - Body-composition calculations
+        - Python reference calculator
+        - Documentation
+        - Validation tooling / CSV
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Repository version / commit
+      placeholder: "0.1.1-research / git commit ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        Board: ESP32 ...
+        Arduino core: ...
+        NimBLE-Arduino: ...
+        IDE / PlatformIO: ...
+        OS: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior and, if relevant, the measurement/frame that triggered it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Flash ...
+        2. Start ...
+        3. Perform ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / raw frame
+      description: Include the smallest useful log excerpt. Remove unrelated BLE devices and personal information.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Screenshots, hypotheses, related issues, or anything else useful.
+    validations:
+      required: false

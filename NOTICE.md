@@ -7,3 +7,8 @@ The project authors examined historical decompiler output and ARM disassembly of
 The source code in this repository is an independently written implementation of the observed BLE protocol and recovered numerical behavior.
 
 "Laica", "YoHealth" and related names may be trademarks of their respective owners. Their use here is solely descriptive and does not imply affiliation or endorsement.
+
+## Product image
+
+The product image under `assets/` was supplied for device identification and README illustration. It is not asserted to be covered by the MIT License unless its copyright holder has granted such rights separately. The MIT License applies to the original project code and documentation, not automatically to third-party product imagery or trademarks.
+
