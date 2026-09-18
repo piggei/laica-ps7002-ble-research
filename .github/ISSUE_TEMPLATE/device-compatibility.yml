@@ -1,5 +1,5 @@
 name: "Device compatibility report"
-description: "Report another LAICA/YoHealth or compatible BLE scale and compare its advertising protocol."
+description: "Report another LAICA/YoHealth or compatible BLE scale and compare its protocol/algorithm."
 title: "[DEVICE] "
 labels: ["device-compatibility", "validation"]
 body:
@@ -8,7 +8,7 @@ body:
       value: |
         Use this form to report a different scale model, confirm a known compatible model, or document a protocol variant.
 
-        Raw BLE advertising data is especially useful. Please avoid including unrelated nearby BLE devices or personal identifiers.
+        Raw BLE advertising plus one companion-app comparison is the strongest evidence. Please remove unrelated BLE devices and unnecessary personal information.
 
   - type: input
     id: manufacturer
@@ -46,8 +46,17 @@ body:
     id: company_id
     attributes:
       label: Manufacturer / Company ID bytes
-      description: If visible in the capture.
+      description: First two bytes returned by NimBLE Manufacturer Data, if visible.
       placeholder: "02 A1"
+    validations:
+      required: false
+
+  - type: input
+    id: device_mode
+    attributes:
+      label: Device mode / precision byte
+      description: Byte 11 in the documented 14-byte frame. PS7002 uses 0x21.
+      placeholder: "0x21"
     validations:
       required: false
 
@@ -63,7 +72,7 @@ body:
     id: advertising
     attributes:
       label: BLE advertising / Manufacturer Data samples
-      description: Paste one or more relevant raw frames, preferably including a final stable measurement.
+      description: Paste one or more relevant raw frames, preferably including realtime and final stable measurements.
       render: text
     validations:
       required: true
@@ -81,10 +90,27 @@ body:
       required: true
 
   - type: textarea
+    id: app_values
+    attributes:
+      label: Body-composition values shown by the companion app
+      description: Optional but highly useful for testing algorithm compatibility. Include bone mass, visceral fat or body age if the app exposes them.
+      placeholder: |
+        BMI: ...
+        Body fat: ...
+        Water: ...
+        Muscle: ...
+        Bone mass: ...
+        Visceral fat: ...
+        Body age: ...
+        BMR: ...
+    validations:
+      required: false
+
+  - type: textarea
     id: observations
     attributes:
       label: Observed behavior
-      description: Describe weight encoding, status transitions, impedance/body-composition data, checksum behavior, or any differences from PROTOCOL.md.
+      description: Describe weight encoding, status transitions, impedance/body-composition data, checksum, mode-byte behavior, or differences from PROTOCOL.md.
     validations:
       required: false
 
@@ -92,7 +118,7 @@ body:
     id: environment
     attributes:
       label: Capture environment
-      description: ESP32 board, scanner version/commit, NimBLE version, or other capture tool used.
+      description: ESP32 board, firmware version/commit, NimBLE version, or other capture tool used.
     validations:
       required: false
 

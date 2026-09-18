@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Reference calculator for the recovered YoHealth body-composition formulas.
+"""Reference calculator for the recovered YoHealth getHealth() algorithm.
 
-This is intentionally independent from the ESP32 sketch so measurements can be
-rechecked offline and formula changes can be regression-tested.
+The formulas were reconstructed from historical native-code artifacts. Their
+user-facing field mapping was recovered from the historical Android application
+that consumed getHealth(). The implementation is independent from the ESP32
+sketch so results can be checked offline and regression-tested.
 """
 
 from __future__ import annotations
 
 import argparse
-import math
-from dataclasses import dataclass, asdict
 import json
+import math
+from dataclasses import asdict, dataclass
 
 
 @dataclass
@@ -22,14 +24,29 @@ class Metrics:
     body_fat_pct: float
     water_pct: float
     muscle_pct: float
-    bone_candidate_kg: float
-    bmr_kcal: int
+    bone_mass_kg: float
+    visceral_fat_pct: float
     body_age: int
-    native_metric_x: float
-    native_metric_y: float
+    bmr_kcal: int
 
 
-def calculate(weight_kg: float, impedance: int, height_cm: float, age: int, male: bool) -> Metrics:
+def calculate(
+    weight_kg: float,
+    impedance: int,
+    height_cm: float,
+    age: int,
+    male: bool,
+) -> Metrics:
+    """Calculate the complete historical YoHealth body-composition result.
+
+    Args:
+        weight_kg: Scale weight in kilograms.
+        impedance: Raw 16-bit YoHealth health/impedance value.
+        height_cm: Profile height in centimetres.
+        age: Profile age in whole years.
+        male: True for male (native sex=0), False for female (native sex=1).
+    """
+
     sex = 0.0 if male else 1.0
     height_m = height_cm / 100.0
     bmi = weight_kg / (height_m * height_m)
@@ -51,12 +68,20 @@ def calculate(weight_kg: float, impedance: int, height_cm: float, age: int, male
 
     if male:
         muscle_pct = ((7.78 * height_cm + 334.0 - 9.8 * age) / weight_kg) + 24.4
-        bmr = math.floor(13.7 * weight_kg + 5.0 * height_cm - 6.8 * age + 66.0 + 0.5)
+        # Native code calls C round() before converting to integer. All BMR
+        # values are positive, so floor(x + 0.5) reproduces that behavior.
+        bmr = math.floor(
+            13.7 * weight_kg + 5.0 * height_cm - 6.8 * age + 66.0 + 0.5
+        )
     else:
         muscle_pct = ((7.74 * height_cm - 318.0 - 9.8 * age) / weight_kg) + 24.4
-        bmr = math.floor(9.6 * weight_kg + 1.8 * height_cm - 4.7 * age + 655.0 + 0.5)
+        bmr = math.floor(
+            9.6 * weight_kg + 1.8 * height_cm - 4.7 * age + 655.0 + 0.5
+        )
 
-    bone = (
+    # getHealth() emits 30 * bone_mass as CSV field 4. Historical Android code
+    # divides that field by 30 and names the resulting value boneMass.
+    bone_mass = (
         0.0077200001 * weight_kg
         + 0.0045 * height_cm
         + 1.95
@@ -64,10 +89,11 @@ def calculate(weight_kg: float, impedance: int, height_cm: float, age: int, male
         - 0.000232 * impedance
     )
     if not male:
-        bone *= 0.75
+        bone_mass *= 0.75
 
-    native_x = 30.0 * bone
-    native_y = fat * (0.45 if male else 0.20)
+    # getHealth() field 5 is a fraction. Historical Android code multiplies by
+    # 100 and passes it to stableData() as visceralFatPercentage.
+    visceral_fat_pct = fat * (0.45 if male else 0.20) * 100.0
 
     if age < 20:
         body_age = age
@@ -94,36 +120,45 @@ def calculate(weight_kg: float, impedance: int, height_cm: float, age: int, male
         body_fat_pct=fat * 100.0,
         water_pct=water * 100.0,
         muscle_pct=muscle_pct,
-        bone_candidate_kg=bone,
-        bmr_kcal=int(bmr),
+        bone_mass_kg=bone_mass,
+        visceral_fat_pct=visceral_fat_pct,
         body_age=body_age,
-        native_metric_x=native_x,
-        native_metric_y=native_y,
+        bmr_kcal=int(bmr),
     )
 
 
 def main() -> None:
-    p = argparse.ArgumentParser()
-    p.add_argument("--weight", type=float, required=True, help="weight in kg")
-    p.add_argument("--impedance", type=int, required=True, help="raw YoHealth health/impedance value")
-    p.add_argument("--height", type=float, required=True, help="height in cm")
-    p.add_argument("--age", type=int, required=True)
-    group = p.add_mutually_exclusive_group(required=True)
+    parser = argparse.ArgumentParser(
+        description="Calculate recovered YoHealth body-composition metrics"
+    )
+    parser.add_argument("--weight", type=float, required=True, help="weight in kg")
+    parser.add_argument(
+        "--impedance",
+        type=int,
+        required=True,
+        help="raw YoHealth health/impedance value",
+    )
+    parser.add_argument("--height", type=float, required=True, help="height in cm")
+    parser.add_argument("--age", type=int, required=True, help="age in whole years")
+    group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--male", action="store_true")
     group.add_argument("--female", action="store_true")
-    p.add_argument("--json", action="store_true")
-    args = p.parse_args()
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args()
 
-    m = calculate(args.weight, args.impedance, args.height, args.age, args.male)
+    metrics = calculate(
+        args.weight, args.impedance, args.height, args.age, args.male
+    )
+
     if args.json:
-        print(json.dumps(asdict(m), indent=2))
+        print(json.dumps(asdict(metrics), indent=2))
         return
 
-    for k, v in asdict(m).items():
-        if isinstance(v, float):
-            print(f"{k:22s}: {v:.6f}")
+    for key, value in asdict(metrics).items():
+        if isinstance(value, float):
+            print(f"{key:22s}: {value:.6f}")
         else:
-            print(f"{k:22s}: {v}")
+            print(f"{key:22s}: {value}")
 
 
 if __name__ == "__main__":

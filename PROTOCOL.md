@@ -1,167 +1,183 @@
 # PS7002 / YoHealth BLE Protocol
 
-This document records the current reverse-engineered BLE protocol of the Laica PS7002 Smart scale.
+This document records the reverse-engineered BLE advertising protocol used by the Laica PS7002 Smart reference device and compares it with the historical YoHealth Android implementation.
 
 ## 1. Discovery history
 
-The initial assumption was that the PS7002 might require a GATT connection. Real-world observation showed otherwise: the scale remains silent before a completed weighing and then broadcasts the result, without pairing or a client request.
+Real-world observation showed that the PS7002 does not require pairing or a GATT request for the measured data. It broadcasts the result in BLE advertising.
 
-A historical reverse-engineering project for the related Laica PS7200L described a device named `YoHealth` with measurement data in BLE manufacturer-specific advertising. That gave us a strong candidate protocol.
+Historical reverse engineering of the related Laica PS7200L identified a device named `YoHealth` with measurement data inside Manufacturer Specific Data. Passive ESP32 captures of the PS7002 showed the same local name and compatible frame structure.
 
-A passive ESP32 scan of the PS7002 then identified the same local name:
+## 2. Manufacturer-data layout
 
-```text
-NAME: YoHealth
-```
-
-and manufacturer-specific data matching the same 12-byte YoHealth payload family, preceded by the two BLE company-ID bytes returned by NimBLE.
-
-## 2. Manufacturer data layout
-
-NimBLE-Arduino exposes the complete manufacturer-data field, including the two-byte BLE Company Identifier.
-
-Observed PS7002 frame:
+NimBLE-Arduino exposes the complete manufacturer-data field including its first two manufacturer/company-ID bytes.
 
 ```text
-02 A1 09 FF WW WW ZZ ZZ SS FF FF 21 CC AA
+02 A1 09 FF WW WW ZZ ZZ SS FF FF MM CC AA
 ```
 
-| Offset | Size | Example | Meaning | Confidence |
+| Offset | Size | Example | Meaning | Status |
 |---:|---:|---|---|---|
-| 0 | 2 | `02 A1` | company identifier bytes as exposed by NimBLE | CONFIRMED |
+| 0 | 2 | `02 A1` | manufacturer/company-ID bytes as exposed by NimBLE | CONFIRMED framing |
 | 2 | 2 | `09 FF` | YoHealth protocol header | CONFIRMED |
-| 4 | 2 | `03 27` | weight × 10, big-endian | CONFIRMED |
-| 6 | 2 | `02 99` | raw health / bio-impedance value, big-endian | CONFIRMED as algorithm input; physical ohm interpretation highly plausible |
-| 8 | 1 | `86` | measurement status / flags | CONFIRMED byte, semantics partially inferred |
-| 9 | 2 | `FF FF` | unknown / reserved | UNKNOWN |
-| 11 | 1 | `21` | constant in all captures so far | OBSERVED |
+| 4 | 2 | `03 27` | raw weight, big-endian | CONFIRMED |
+| 6 | 2 | `02 99` | health / impedance input, big-endian | CONFIRMED algorithm input |
+| 8 | 1 | `86` | state/flags | SOURCE-MAPPED + observed |
+| 9 | 2 | `FF FF` | unknown/reserved | OPEN |
+| 11 | 1 | `21` | device type / precision code | SOURCE-MAPPED |
 | 12 | 1 | `15` | checksum | CONFIRMED |
 | 13 | 1 | `AA` | terminator | CONFIRMED |
 
-## 3. Weight encoding
+## 3. Device mode / precision byte
 
-Weight is the unsigned big-endian integer at manufacturer-data bytes 4–5 divided by 10:
+Historical `YoHealthBtScaleHelper` reads byte 11 as the two-character hexadecimal text and parses that text as a decimal integer. For digit-only values this behaves like a BCD code.
+
+Example:
+
+```text
+raw byte 0x21 -> text "21" -> mode code 21
+```
+
+The app interprets the code as:
+
+```text
+ones digit 1 -> weight = raw / 10
+ones digit 2 -> weight = raw / 100, high-precision mode
+
+10 < mode < 20 -> weight-only device
+20 < mode < 30 -> body-composition device
+```
+
+Therefore the PS7002's observed `0x21` means:
+
+```text
+body-composition device
+0.1 kg weight resolution
+```
+
+This field was previously documented merely as an observed constant; the historical Android source resolves its purpose.
+
+## 4. Weight encoding
+
+For mode `0x21`:
 
 ```text
 03 27 = 0x0327 = 807
 807 / 10 = 80.7 kg
 ```
 
-Formula:
+For a mode whose ones digit is `2`, the historical app instead divides the raw value by 100.
 
-```text
-weight_kg = BE16(mfg[4], mfg[5]) / 10
-```
+The firmware now implements both paths.
 
-## 4. Health / impedance encoding
+## 5. Health / impedance
 
-The two bytes at offsets 6–7 are unavailable during the weight-only phase:
+Offsets 6–7 are `FF FF` while body-composition data is unavailable and become numeric after a valid electrode/BIA measurement.
 
-```text
-FF FF
-```
-
-and become a numeric value after a completed body-composition measurement:
+Reference:
 
 ```text
 02 99 = 665
 ```
 
-The recovered YoHealth algorithm consumes this value directly in the body-composition equations. It behaves exactly like an impedance term and values such as 665 are physically plausible for foot-to-foot BIA, so the project labels it `impedance` in code while retaining the historical term `health` in documentation where useful.
+The historical Android app passes this integer directly to `getHealth()` as its fifth argument. Its role in the recovered equations is exactly that of an impedance term. The code uses the name `impedance`, while documentation sometimes retains the historical name `health`.
 
-## 5. Status byte
+## 6. Status byte and measurement lifecycle
 
-Statuses observed so far:
+Historical Android source reveals more than the three observed PS7002 byte values.
 
-| Status | Observation | Current interpretation |
+### Stable/lock bit
+
+The app tests bit 1 (`0x02`):
+
+```text
+bit 1 clear -> realtime data
+bit 1 set   -> stable/locked data
+```
+
+### Body-composition availability
+
+For a stable body-composition device, the app treats a low nibble equal to `0x2` as a no-body-composition condition (historically named `State_WearOutShoe`). Otherwise it calculates and publishes the body-composition fields.
+
+### PS7002 observations
+
+| Status | Bit-level observation | Interpretation |
 |---|---|---|
-| `0x80` | weight changing / health `FFFF` | measurement in progress / no impedance |
-| `0x82` | stable weight observed in earlier capture | stable weight candidate |
-| `0x86` | stable weight + numeric health value | final body-composition measurement |
+| `0x80` | stable bit clear | realtime / measurement in progress |
+| `0x82` | stable bit set, low nibble `2` | stable weight only / no BIA result |
+| `0x86` | stable bit set, low nibble `6` | stable body-composition result |
 
-Only `0x86` is currently used to emit a final body-composition result.
+The reference firmware therefore accepts a final body-composition measurement when:
 
-The exact bit-level meaning is not yet proven. Future captures should test whether these are independent flags or enumerated states.
+```text
+checksum valid
+health/impedance is numeric
+status bit 1 is set
+(status & 0x0F) != 0x02
+```
 
-## 6. Checksum
+On the PS7002 this corresponds to the observed `0x86` frame, while preserving compatibility with possible related YoHealth variants.
 
-The checksum is the low eight bits of the sum of bytes 0 through 11 of the manufacturer-data block:
+The historical code also uses bit 0 as an overweight-state indication. A low-voltage state constant exists in the API, but its exact raw bit mapping was not identified in the reviewed path.
+
+## 7. Checksum
+
+The checksum was recovered experimentally from PS7002 captures and verified against historical PS7200L example packets:
 
 ```text
 checksum = sum(mfg[0:12]) & 0xFF
 ```
 
-For the final reference packet:
+For:
 
 ```text
 02 A1 09 FF 03 27 02 99 86 FF FF 21 15 AA
                                     ^^
 ```
 
-summing bytes `0..11` modulo 256 gives `0x15`, exactly matching byte 12.
+the low byte of the sum of bytes 0 through 11 is `0x15`.
 
-This also matches historical YoHealth/PS7200L sample frames when the two company-ID bytes are included.
+The historical Android path reviewed here does not appear to validate this checksum, but the research firmware does.
 
-## 7. Complete reference measurement
-
-Reference profile:
-
-```text
-sex        male
-age        55
-height     175 cm
-```
-
-Final packet:
+## 8. Complete reference frame
 
 ```text
 02 A1 09 FF 03 27 02 99 86 FF FF 21 15 AA
 ```
 
-Decoded radio values:
+Decoded:
 
 ```text
-weight       80.7 kg
-health/Z     665
-status       0x86
-checksum     valid
+weight raw       807
+weight           80.7 kg
+health/Z         665
+status           0x86
+mode             0x21
+scale class      body composition
+resolution       0.1 kg
+checksum         valid
 ```
 
-Laica app values supplied for the same measurement:
+## 9. Device addressing
+
+One captured PS7002 advertised as:
 
 ```text
-body fat     23.28 %
-water        56 %
-BMI          26.35
-muscle       38.73 %
-```
-
-The independently reconstructed calculations produce the same values to the displayed precision; see `ALGORITHM.md`.
-
-## 8. Device addressing
-
-A captured PS7002 advertised with:
-
-```text
-MAC ff:ff:ff:ff:ff:d0
+MAC  ff:ff:ff:ff:ff:d0
 NAME YoHealth
 ```
 
-The implementation deliberately does **not** depend on this MAC address. Device identification is based on protocol framing so the decoder has a better chance of working across PS7002 units and related YoHealth-based scales.
+The decoder deliberately does not depend on that MAC address. It identifies frames by protocol structure so the implementation can be tested with other units and related models.
 
-## 9. Passive operation
+## 10. Passive operation
 
-No GATT connection, pairing or command transmission is required for the observed measurement flow. The ESP32 implementation is receive-only.
+No connection, pairing or outbound BLE command is required for the observed measurement flow. The implementation is receive-only, making the protocol suitable for future Passive BLE Monitor / Home Assistant integration.
 
-This makes the protocol suitable for a future Passive BLE Monitor decoder.
+## 11. Open protocol questions
 
-## 10. Open protocol questions
-
-Still to be established with additional captures:
-
-- exact bit meaning of status byte `0x80/0x82/0x86`;
-- semantic meaning of bytes 9–10;
-- whether byte 11 is always `0x21` across units/modes;
-- unit-mode behavior (kg/lb/st);
-- behavior on weight-only measurements without electrode contact;
-- whether related Laica models share the exact same manufacturer identifier and final-state rules.
+- meaning of bytes 9–10;
+- complete mapping of all status/error bits;
+- unit-mode behavior beyond captured kg mode;
+- whether all compatible devices use `02 A1 09 FF` framing;
+- whether other Laica/YoHealth models use additional mode codes;
+- whether some models transmit different final-state values while following the same bit logic.

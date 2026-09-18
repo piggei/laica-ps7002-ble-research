@@ -2,13 +2,16 @@
 
 This repository is an independent interoperability research project.
 
-The project authors examined historical decompiler output and ARM disassembly of a proprietary YoHealth native library in order to understand how a lawfully owned consumer device represents and calculates its measurements. The proprietary binary and decompiler output are not distributed in this MIT-licensed repository.
+The project authors examined historical decompiler output, ARM disassembly and decompiled Android application code associated with a proprietary YoHealth/Laica software stack in order to understand how a lawfully owned consumer device represents and calculates measurements.
 
-The source code in this repository is an independently written implementation of the observed BLE protocol and recovered numerical behavior.
+Those proprietary binaries and decompiled sources are **not distributed** in this MIT-licensed repository.
 
-"Laica", "YoHealth" and related names may be trademarks of their respective owners. Their use here is solely descriptive and does not imply affiliation or endorsement.
+The source code and documentation in this repository are independently written descriptions and implementations of observed protocol behavior and recovered interoperability facts.
+
+"Laica", "YoHealth" and related names may be trademarks of their respective owners. Their use is descriptive and does not imply affiliation or endorsement.
 
 ## Product image
 
-The product image under `assets/` was supplied for device identification and README illustration. It is not asserted to be covered by the MIT License unless its copyright holder has granted such rights separately. The MIT License applies to the original project code and documentation, not automatically to third-party product imagery or trademarks.
+The image under `assets/` is included for device identification and README illustration. It is not asserted to be covered by the MIT License unless its copyright holder has granted such rights separately.
 
+The MIT License applies to the original project code and documentation, not automatically to third-party imagery, trademarks or historical proprietary/decompiled materials.

@@ -1,22 +1,22 @@
 name: "Sample measurement / algorithm validation"
-description: "Submit one LAICA/YoHealth weighing to compare the recovered calculations with the app and help validate device compatibility."
+description: "Submit one LAICA/YoHealth weighing to validate the recovered algorithm and device compatibility."
 title: "[MEASUREMENT] "
 labels: ["measurement", "validation"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping validate the recovered YoHealth/LAICA algorithm and its compatibility across scale models.
+        Thanks for helping validate the recovered YoHealth/LAICA algorithm and cross-device compatibility.
 
-        Please submit **one complete weighing per issue** when possible. Do not include your name, exact date of birth, account identifiers, or other identifying health information. Age in years is sufficient for the calculations.
+        Please submit **one complete weighing per issue** when possible. Do not include your name, exact date of birth, account identifiers, or unrelated health information. Age in whole years is sufficient.
 
-        If you prefer not to disclose a profile field, say so. Protocol-level validation can still be useful even when some body-composition formulas cannot be reproduced.
+        Some app versions do not display every historical YoHealth field. Use `not displayed` where appropriate rather than guessing a value.
 
   - type: input
     id: device_model
     attributes:
       label: Scale model
-      description: Exact manufacturer and model printed on the scale or in the app.
+      description: Exact manufacturer and model printed on the scale or shown in the app.
       placeholder: "e.g. LAICA PS7002, LAICA PS7200L, ..."
     validations:
       required: true
@@ -25,7 +25,7 @@ body:
     id: app
     attributes:
       label: App and version
-      description: App used to display the reference body-composition values.
+      description: Companion app used to display the reference values.
       placeholder: "LAICA Home Wellness / version ..."
     validations:
       required: false
@@ -34,7 +34,7 @@ body:
     id: profile_sex
     attributes:
       label: Sex selected in the app profile
-      description: Needed to reproduce the sex-specific formulas. Choose "Not disclosed" if you prefer.
+      description: Needed for sex-specific formulas. Choose Not disclosed if preferred.
       options:
         - Male
         - Female
@@ -46,7 +46,7 @@ body:
     id: profile_age
     attributes:
       label: Age used by the app (years)
-      description: Age in whole years at the time of measurement. Do not enter an exact date of birth.
+      description: Age in whole years only; do not enter an exact date of birth.
       placeholder: "55"
     validations:
       required: false
@@ -80,9 +80,17 @@ body:
     id: status
     attributes:
       label: Final status byte
-      description: Usually 0x86 for a complete body-composition frame.
+      description: PS7002 complete body-composition measurements normally use 0x86.
       placeholder: "0x86"
-      value: "0x86"
+    validations:
+      required: false
+
+  - type: input
+    id: mode
+    attributes:
+      label: Device mode / precision byte
+      description: Byte 11 of Manufacturer Data. PS7002 normally uses 0x21.
+      placeholder: "0x21"
     validations:
       required: false
 
@@ -99,15 +107,16 @@ body:
     id: app_values
     attributes:
       label: Values shown by the app
-      description: Enter every value available. Leave unknown/not displayed fields blank.
+      description: Enter every value available. Use `not displayed` for hidden fields.
       placeholder: |
         BMI: 26.35
         Body fat: 23.28 %
         Water: 56.00 %
         Muscle: 38.73 %
-        Bone mass: ... kg
-        BMR: ... kcal/day
-        Body age: ...
+        Bone mass: not displayed
+        Visceral fat: not displayed
+        Body age: not displayed
+        BMR: 1673 kcal/day
     validations:
       required: true
 
@@ -124,7 +133,7 @@ body:
     id: notes
     attributes:
       label: Notes
-      description: Anything unusual about the measurement, electrode contact, units, app behavior, or repeated attempts.
+      description: Anything unusual about electrode contact, units, app behavior, or repeated attempts.
     validations:
       required: false
 

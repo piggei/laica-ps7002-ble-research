@@ -8,11 +8,12 @@ checks = {
     "fat": (m.body_fat_pct, 23.286245353159853, 1e-6),
     "water": (m.water_pct, 56.0010408921933, 1e-6),
     "muscle": (m.muscle_pct, 38.73085501858736, 1e-6),
-    "bone_candidate": (m.bone_candidate_kg, 2.856424, 1e-6),
+    "bone_mass": (m.bone_mass_kg, 2.85642400807, 1e-6),
+    "visceral_fat": (m.visceral_fat_pct, 10.478810408921934, 1e-6),
 }
 
-for name, (got, expected, tol) in checks.items():
-    if abs(got - expected) > tol:
+for name, (got, expected, tolerance) in checks.items():
+    if abs(got - expected) > tolerance:
         raise SystemExit(f"FAIL {name}: got {got}, expected {expected}")
 
 if m.bmr_kcal != 1673:
@@ -20,4 +21,4 @@ if m.bmr_kcal != 1673:
 if m.body_age != 67:
     raise SystemExit(f"FAIL body age: got {m.body_age}, expected 67")
 
-print("PASS: recovered reference vector matches expected values")
+print("PASS: complete recovered YoHealth reference vector matches expected values")

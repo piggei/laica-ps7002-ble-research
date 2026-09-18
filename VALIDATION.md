@@ -1,10 +1,13 @@
 # Validation Plan
 
-The first goal is to determine whether the recovered YoHealth calculations reproduce the current Laica PS7002 app across multiple real measurements, not only one reference point. A parallel goal is to test whether the same BLE protocol and calculation algorithm are shared by other LAICA/YoHealth scale models.
+The project now has two distinct validation goals:
+
+1. verify the recovered YoHealth calculations across more real PS7002 measurements;
+2. determine which other Laica/YoHealth scales share the same BLE protocol and algorithm.
 
 ## 1. Keep profile variables identical
 
-Before every validation series, ensure the ESP32 constants exactly match the app profile:
+The ESP32/Python profile must match the companion app:
 
 ```text
 sex
@@ -12,115 +15,152 @@ age
 height
 ```
 
-For the initial campaign:
+Initial reference profile:
 
 ```text
 sex       male
-DOB       1970-12-10
 age       55
 height    175 cm
 ```
 
-Age changes the formulas directly. Update the sketch when the app profile age changes.
+Age directly changes several formulas.
 
 ## 2. Perform a complete measurement
 
-For body-composition data, use the scale as intended for BIA measurement (including electrode contact). Wait until the scale/app completes the measurement.
+For body-composition data, use valid electrode contact and wait for the complete measurement.
 
-The ESP32 should eventually report:
+On the PS7002 the final frame is normally:
 
 ```text
-Status : 0x86 (BODY_COMPLETE)
+status = 0x86
+health/impedance = numeric
+mode = 0x21
 ```
 
-with a numeric impedance value.
+The firmware now follows the more general historical YoHealth stable-state logic rather than accepting only one hard-coded status value.
 
-## 3. Record both sides
+## 3. Record ESP32 results
 
-From the ESP32 record:
+Record:
 
-- final raw manufacturer data;
+- final raw Manufacturer Data;
+- status byte;
+- device mode byte/code;
 - weight;
 - impedance;
 - BMI;
 - body fat;
 - water;
 - muscle;
-- BMR;
+- bone mass;
+- visceral fat;
 - body age;
-- bone candidate;
-- native metric X/Y.
+- BMR.
 
-From the Laica app record every value the UI displays, especially:
+## 4. Record app results
+
+Record every value the current companion app actually displays.
+
+A field may legitimately be marked **not displayed**. The current PS7002 app used during this project does not expose every historical YoHealth output field.
+
+Useful fields include:
 
 - weight;
 - BMI;
 - body fat %;
 - water %;
 - muscle %;
-- bone mass;
 - BMR;
-- body/metabolic age if present.
+- bone mass, if shown;
+- visceral fat, if shown;
+- body age, if shown.
 
-## 4. Use the CSV template
+## 5. Use the CSV template
 
 Copy `data/measurements-template.csv` and append one row per weighing.
 
-A useful dataset should include:
+A good dataset includes:
 
-- repeated measurements around the same weight;
-- naturally different weights over time;
-- different impedance values;
-- ideally 10+ complete body-composition samples.
+- repeated measurements around similar weights;
+- naturally different weights and impedance values;
+- different profile values where intentionally tested;
+- measurements from additional scale models.
 
-The most important current target is confirming the semantic mapping of the bone candidate and the two unidentified native metrics.
+## 6. Matching rules
 
-## 5. What counts as a match
+Do not confuse display formatting with formula differences.
 
-Consider the app's display rounding. For example, the recovered reference body-fat value is:
+For example, the reference algorithm yields:
 
 ```text
-23.286245 %
+body fat = 23.286245... %
 ```
 
-while the app displays:
+while one current app displays:
 
 ```text
 23.28 %
 ```
 
-Do not infer a formula discrepancy from simple formatting/rounding until the display behavior is characterized.
+The historical Bodytouch app rounded many metrics to one decimal place, so different app versions can display the same underlying calculation differently.
 
-## 6. Useful negative tests
+## 7. Reference vector
 
-Optional protocol tests:
+```text
+Model      LAICA PS7002
+Sex        male
+Age        55
+Height     175 cm
+Weight     80.7 kg
+Impedance  665
+```
+
+Expected recovered values:
+
+```text
+BMI                  26.351020
+Body fat             23.286245 %
+Water                56.001041 %
+Muscle               38.730855 %
+Bone mass             2.856424 kg
+Visceral fat         10.478810 %
+Body age             67
+BMR                 1673 kcal/day
+```
+
+The first four displayed composition values matched the current app exactly to its displayed precision, and a later PS7002 weighing was reported to match every field exposed by the current app.
+
+## 8. Useful protocol tests
+
+Optional tests that help characterize the wire protocol:
 
 - stand on the scale without valid electrode contact;
-- change unit mode if supported;
-- repeat exactly the same measurement after the first session closes;
-- observe whether `0x82` always precedes `0x86`;
-- note packets when only weight is measured.
+- capture the transition from realtime to stable weight;
+- change weight units if supported;
+- repeat identical measurements in separate sessions;
+- test a model using mode precision digit `2` if one is found;
+- capture status/error conditions.
 
-## 7. Report format
-
-When returning results for analysis, a compact report like this is ideal:
+## 9. Suggested report format
 
 ```text
 Scale model: LAICA PS7002
+App/version: ...
 Profile: male, 55, 175 cm
 
 ESP32:
 weight=...
 impedance=...
+status=...
+mode=...
 bmi=...
 fat=...
 water=...
 muscle=...
-bone_candidate=...
-bmr=...
+bone=...
+visceral_fat=...
 body_age=...
-native_x=...
-native_y=...
+bmr=...
 
 App:
 weight=...
@@ -128,17 +168,18 @@ bmi=...
 fat=...
 water=...
 muscle=...
-bone=...
+bone=not displayed
+visceral_fat=not displayed
+body_age=not displayed
 bmr=...
-body_age=...
 
 Raw MFG: ...
 ```
 
-A CSV row from the logger plus the app values is even better.
+## 10. GitHub validation issues
 
-## 8. Submit a GitHub validation issue
+Use **Sample measurement / algorithm validation** for a complete weighing.
 
-The repository includes a structured **Sample measurement / algorithm validation** issue form. For public validation reports, prefer one complete weighing per issue, always identify the exact scale model, and include the final raw Manufacturer Data frame plus the values shown by the app. Measurements from models other than the PS7002 are especially useful for the compatibility campaign.
+Use **Device compatibility report** for a new model or protocol variant.
 
-Do not publish a name or exact date of birth. Age in whole years is sufficient for reproducing the recovered calculations.
+One weighing per issue is preferred. Do not publish names, exact dates of birth or unrelated personal/medical information; age in whole years is sufficient.

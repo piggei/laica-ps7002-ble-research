@@ -1,19 +1,19 @@
 # Validation data
 
 `measurements-template.csv` is the canonical schema for experimental comparisons.
-Copy it to a new file (for example `measurements-2026-09.csv`) and append one row
-per completed weighing session.
 
-Do not commit personally identifying names or unrelated health records.  The
-project needs only the exact scale model, the profile variables used by the
-algorithm (sex, age, height), and the scale/app outputs required to validate
-formulas. The BLE local name is also useful when testing additional models.
+Copy it to a new file and append one row per completed weighing session.
+
+Do not commit names, exact dates of birth or unrelated health records. The project needs the scale/app variables required to reproduce calculations and protocol behavior.
 
 Recommended workflow:
 
-1. Configure the sketch profile to exactly match the Laica app profile.
+1. Configure the profile to match the app.
 2. Start serial capture.
-3. Perform one complete barefoot body-composition measurement.
-4. Copy the ESP32 `FINAL MEASUREMENT` / `CSV` result.
-5. Record the corresponding values shown by the app.
-6. Add one row to the CSV and note any unusual condition.
+3. Perform one complete body-composition measurement.
+4. Copy the ESP32 `FINAL MEASUREMENT` / `CSV` output.
+5. Record the values actually shown by the app.
+6. Mark hidden fields as `not displayed` rather than guessing them.
+7. Add one row to the dataset.
+
+The current PS7002 app used in this project may hide bone mass, visceral fat and body age, while the recovered historical YoHealth algorithm still calculates them.

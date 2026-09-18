@@ -2,22 +2,27 @@
 
 ## 1. Source and methodology
 
-A historical ARM native library used by the YoHealth/Laica application exposed a function named `getHealth()`. The available 2018 RetDec decompilation was incomplete and sometimes assigned incorrect C types to ARM register values, but the numerical operations and literal constants were still recoverable.
+The historical YoHealth/Laica Android application calls a native function named `getHealth()` from `libyohealth.so`.
 
-We reconstructed the calculation by:
+The 2018 RetDec C output contains type-recovery errors, so the reconstruction used several sources together:
 
-1. locating JNI `Java_com_example_hellojni_HelloJni_getHealth`;
-2. following the ARM call into native `getHealth()`;
-3. mapping stack/register arguments back to sex, age, height, weight and health/impedance;
-4. decoding floating-point literal pools from ARM disassembly;
-5. rewriting the arithmetic in ordinary C/Python;
-6. checking the result against a real PS7002 measurement and Laica app output.
+1. JNI/native function signatures;
+2. ARM disassembly and floating-point constants;
+3. decompiled Android Java source;
+4. real PS7002 BLE measurements;
+5. comparison with values displayed by the current Laica app.
 
-The exact match of four independently displayed app values provides strong validation of the interpretation.
+The Java source is particularly important because it establishes both the **input order** and the **meaning of every returned field**.
 
-## 2. Inputs
+## 2. Inputs — SOURCE-MAPPED
 
-The recovered algorithm uses:
+Historical Java calls:
+
+```text
+getHealth(sex, age, height, weight, impedance)
+```
+
+with:
 
 ```text
 sex          0 = male, 1 = female
@@ -27,7 +32,7 @@ weight       kg
 impedance    raw 16-bit YoHealth health value
 ```
 
-For our reference measurement:
+Reference vector:
 
 ```text
 sex          0
@@ -37,7 +42,26 @@ weight       80.7
 impedance    665
 ```
 
-## 3. BMI — CONFIRMED
+## 3. Native output order — SOURCE-MAPPED
+
+`getHealth()` formats eight comma-separated fields. Historical `YoHealthBtScaleHelper` maps them as follows:
+
+| Native index | Native representation | Android interpretation |
+|---:|---|---|
+| 0 | float | BMI |
+| 1 | fraction | body fat × 100 |
+| 2 | fraction | water × 100 |
+| 3 | fraction | muscle × 100 |
+| 4 | native bone value | divide by 30 -> bone mass |
+| 5 | fraction | visceral fat × 100 |
+| 6 | integer | body age |
+| 7 | integer | BMR |
+
+This mapping definitively resolves the fields previously documented as `bone candidate`, `native metric X` and `native metric Y`.
+
+The old Android application rounded several displayed percentages to one decimal place. Newer Laica apps may format the same underlying values differently.
+
+## 4. BMI — CONFIRMED
 
 ```text
 height_m = height_cm / 100
@@ -48,12 +72,10 @@ Reference:
 
 ```text
 80.7 / 1.75² = 26.351020...
-app = 26.35
+current app = 26.35
 ```
 
-## 4. Lean-mass intermediate — RECOVERED
-
-The central internal estimate is:
+## 5. Lean-mass intermediate — RECOVERED
 
 ```text
 lean_mass_kg =
@@ -65,43 +87,41 @@ lean_mass_kg =
   - 0.05 * age
 ```
 
-Reference result:
+Reference:
 
 ```text
 lean_mass = 61.908 kg
 ```
 
-This internal value is not necessarily shown by the Laica app.
+This is an internal estimate, not one of the eight user-facing YoHealth fields.
 
-## 5. Body fat — CONFIRMED
-
-Initial fraction:
+## 6. Body fat — CONFIRMED
 
 ```text
-fat = (weight - lean_mass) / weight
+fat_fraction = (weight - lean_mass) / weight
 ```
 
-The native routine applies a special correction if the result is below 10%:
+The native routine applies a correction below 10%:
 
 ```text
-if fat < 0.10:
-    fat = fat + 0.7 * (0.10 - fat)
+if fat_fraction < 0.10:
+    fat_fraction = fat_fraction + 0.7 * (0.10 - fat_fraction)
 ```
 
-Displayed percentage:
+User-facing value:
 
 ```text
-body_fat_pct = fat * 100
+body_fat_pct = fat_fraction * 100
 ```
 
 Reference:
 
 ```text
 23.286245... %
-app = 23.28 %
+current app = 23.28 %
 ```
 
-## 6. Water — CONFIRMED
+## 7. Water — CONFIRMED
 
 ```text
 water_fraction = 0.73 * lean_mass / weight
@@ -112,12 +132,10 @@ Reference:
 
 ```text
 56.001041... %
-app = 56 %
+current app = 56 %
 ```
 
-The factor 0.73 explains the empirical relationship first observed before the native routine was fully reconstructed.
-
-## 7. Muscle — CONFIRMED for male reference profile
+## 8. Muscle — CONFIRMED for the male PS7002 profile
 
 ### Male
 
@@ -131,10 +149,10 @@ Reference:
 
 ```text
 38.730855... %
-app = 38.73 %
+current app = 38.73 %
 ```
 
-### Female
+### Female — RECOVERED
 
 ```text
 muscle_pct =
@@ -142,11 +160,73 @@ muscle_pct =
     + 24.4
 ```
 
-The female branch is directly recovered but has not yet been validated with a PS7002 female-profile capture.
+The female branch is recovered from native code but still needs direct PS7002 validation with a female app profile.
 
-## 8. BMR — RECOVERED, validation pending
+## 9. Bone mass — SOURCE-MAPPED
 
-The routine uses sex-specific equations and rounds the result.
+The native calculation first produces:
+
+```text
+bone_mass =
+    0.0077200001 * weight_kg
+  + 0.0045 * height_cm
+  + 1.95
+  - 0.00636 * age
+  - 0.000232 * impedance
+```
+
+For female profiles:
+
+```text
+bone_mass *= 0.75
+```
+
+The native CSV field is:
+
+```text
+field_4 = 30 * bone_mass
+```
+
+Historical Android code explicitly divides field 4 by 30 and passes the result as `boneMass`.
+
+Reference male result:
+
+```text
+bone_mass = 2.856424 kg
+native field 4 = 85.692720
+```
+
+The current PS7002 app used in this project does not expose bone mass, so the **semantic mapping is confirmed from source**, while current-app display validation is not available.
+
+## 10. Visceral fat — SOURCE-MAPPED
+
+The native field is derived from body-fat fraction:
+
+```text
+male:   visceral_fraction = fat_fraction * 0.45
+female: visceral_fraction = fat_fraction * 0.20
+```
+
+Historical Android code multiplies this by 100 and passes it as `visceralFatPercentage`.
+
+Therefore:
+
+```text
+male:   visceral_fat_pct = body_fat_pct * 0.45
+female: visceral_fat_pct = body_fat_pct * 0.20
+```
+
+Reference male result:
+
+```text
+visceral_fat_pct = 10.478810... %
+```
+
+The current PS7002 app used in this project does not expose this field.
+
+## 11. BMR — CONFIRMED on current PS7002 app
+
+The native implementation applies C `round()` before returning the integer.
 
 ### Male
 
@@ -157,12 +237,6 @@ BMR = round(
   - 6.8 * age
   + 66
 )
-```
-
-Reference prediction:
-
-```text
-1673 kcal/day
 ```
 
 ### Female
@@ -176,9 +250,15 @@ BMR = round(
 )
 ```
 
-## 9. Body age — RECOVERED
+Reference male prediction:
 
-The native routine implements a simple BMI/age heuristic:
+```text
+1673 kcal/day
+```
+
+A subsequent PS7002 weighing matched all values exposed by the current app, including BMR.
+
+## 12. Body age — SOURCE-MAPPED
 
 ```text
 if age < 20:        body_age = age
@@ -191,63 +271,15 @@ else if age <= 44:  body_age = age - 12
 else:               body_age = age - 16
 ```
 
-Reference prediction:
+Reference:
 
 ```text
 BMI 26.35, age 55 -> body age 67
 ```
 
-Whether the current Laica UI exposes this field remains to be checked.
+Historical Android code passes native field 6 as `bodyAge`. The current PS7002 app used for validation does not display it.
 
-## 10. Bone candidate — HYPOTHESIS
-
-The native routine contains the following sex-dependent term:
-
-```text
-base =
-    0.0077200001 * weight_kg
-  + 0.0045 * height_cm
-  + 1.95
-  - 0.00636 * age
-  - 0.000232 * impedance
-
-if female:
-    base *= 0.75
-```
-
-For the reference male measurement:
-
-```text
-base = 2.856424
-```
-
-This is a biologically plausible bone-mass value in kg and is therefore logged as:
-
-```text
-bone_candidate_kg = 2.856
-```
-
-However, caution is required: the native function subsequently transforms this intermediate before formatting one of its return fields. Until the Laica app's bone value is compared against several measurements, the semantic mapping remains a **hypothesis**, not a confirmed result.
-
-## 11. Additional native metrics — semantics unknown
-
-Two further expressions are visible in the native routine:
-
-```text
-native_metric_x = 30 * bone_candidate
-```
-
-and:
-
-```text
-native_metric_y = fat_fraction * coefficient
-coefficient = 0.45 male
-coefficient = 0.20 female
-```
-
-Their numerical formulas are recovered, but their user-facing labels are not yet proven. They are emitted by the research logger under neutral names rather than being prematurely called visceral fat, score, protein, etc.
-
-## 12. Reference vector
+## 13. Complete reference vector
 
 Input:
 
@@ -259,7 +291,7 @@ weight=80.7 kg
 impedance=665
 ```
 
-Predicted:
+Calculated:
 
 ```text
 BMI                  26.351020
@@ -267,15 +299,23 @@ lean mass            61.908000 kg
 body fat             23.286245 %
 water                56.001041 %
 muscle               38.730855 %
-bone candidate        2.856424 kg
+bone mass             2.856424 kg
+visceral fat         10.478810 %
+body age             67
 BMR                 1673 kcal/day
-body age              67
-native metric X       85.692720
-native metric Y        0.104788
 ```
 
-## 13. Confidence policy
+## 14. Display formatting is not the algorithm
 
-The project intentionally distinguishes formula recovery from semantic naming.
+The historical Android application rounded several values to one decimal place using `BigDecimal` with half-up rounding. The current PS7002 application observed during this project displays some values with different precision, for example body fat and BMI with two decimals.
 
-A formula may be numerically present in the binary yet still have an uncertain UI meaning. New measurements should therefore be used both to test numeric accuracy and to identify which native output corresponds to each current app field.
+The firmware and Python reference calculator therefore preserve more numerical precision and do not try to imitate a specific app version's presentation layer.
+
+## 15. Remaining algorithm-validation work
+
+The complete field semantics are now known, but useful validation remains:
+
+- female-profile measurements;
+- larger sample counts across different weight/impedance values;
+- confirmation on other Laica/YoHealth models;
+- comparison of hidden historical fields where another app/model exposes them.

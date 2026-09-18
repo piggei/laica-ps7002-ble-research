@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0-research - 2026-09-18
+
+Major reverse-engineering milestone.
+
+- Recovered the complete semantic mapping of all eight historical YoHealth `getHealth()` output fields from the decompiled Android consumer.
+- Replaced `bone candidate` / `native metric X` / `native metric Y` with their source-mapped meanings:
+  - bone mass;
+  - visceral fat percentage;
+  - body age.
+- Confirmed the `getHealth()` input order as sex, age, height, weight and impedance.
+- Documented that current PS7002 app versions may hide historical YoHealth fields even though the algorithm still produces them.
+- Marked BMR as confirmed against a subsequent real PS7002 weighing in which all current-app-exposed metrics matched the research implementation.
+- Identified Manufacturer Data byte 11 as the historical YoHealth device type / weight-precision code; `0x21` means body-composition device with 0.1 kg resolution.
+- Improved status decoding using the historical app's stable/lock bit and no-BIA state logic instead of relying only on a hard-coded `0x86` value.
+- Updated the firmware to calculate and print the complete named YoHealth result set.
+- Updated CSV output and validation schema with status, device mode, bone mass and visceral fat.
+- Updated Issue Forms for complete cross-device and hidden-field validation.
+- Added `REVERSE_ENGINEERING.md` and `COMPATIBILITY.md`.
+- Expanded protocol and algorithm documentation with source-mapped findings.
+
 ## 0.1.2-research - 2026-09-18
 
 - Added the PS7002 product image directly below the README title.

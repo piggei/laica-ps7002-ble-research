@@ -1,46 +1,56 @@
 # Contributing
 
-Contributions are welcome, especially reproducible measurements, compatible-device reports, protocol observations, bug reports, and corrections to the recovered algorithm documentation. The PS7002 is the reference device, but a major goal is to determine which other LAICA/YoHealth scales share the same protocol and calculation algorithm.
+Contributions are welcome, especially reproducible measurements, compatible-device reports, protocol observations, bug reports and documentation corrections.
 
-## Use the structured issue forms
+The PS7002 is the reference device, but a major goal is to determine which other Laica/YoHealth scales share the same protocol and body-composition algorithm.
 
-GitHub provides three project-specific issue forms:
+## Structured issue forms
 
-- **Sample measurement / algorithm validation** — one weighing, including the exact scale model, with raw YoHealth data and the values shown by the companion app.
-- **Device compatibility report** — another scale/model that appears to use the same or a related protocol.
-- **Bug report** — a reproducible problem in the firmware, parser, calculator, or documentation.
+Use one of the included GitHub Issue Forms:
 
-Blank public issues are disabled so reports stay structured and comparable.
+- **Sample measurement / algorithm validation** — one complete weighing with the exact scale model, protocol data and app comparison;
+- **Device compatibility report** — another model that appears to use the same or a related YoHealth protocol;
+- **Bug report** — a reproducible problem in firmware, calculator or documentation.
 
 ## Measurement privacy
 
-A useful algorithm-validation sample normally needs only:
+A useful validation sample normally needs only:
 
 - scale model;
-- profile sex setting used by the app, if the contributor chooses to share it;
-- age in whole years, if shared;
-- height in cm, if shared;
+- app/version;
+- profile sex setting, age in whole years and height if the contributor chooses to share them;
 - weight;
-- raw health/impedance value;
-- final Manufacturer Data frame;
-- body-composition values shown by the app.
+- raw impedance/health;
+- final Manufacturer Data;
+- calculated fields;
+- values shown by the app.
 
-Do **not** publish names, exact dates of birth, account identifiers, addresses, medical records, or other information that is not required to reproduce the calculation.
+Do **not** publish names, exact dates of birth, account identifiers, addresses, medical records or unrelated health information.
 
-One complete weighing per issue is preferred because it makes comparison and discussion easier.
+## Hidden fields are useful
+
+Historical YoHealth source identifies bone mass, visceral fat and body age even though some current Laica app versions may not show them. If another model/app does display those fields, please report them: they are especially valuable for cross-device validation.
 
 ## Protocol observations
 
-When reporting raw BLE data:
+When posting BLE data:
 
 - remove unrelated nearby BLE traffic;
-- include the exact scale model and BLE local name when known;
-- include the displayed weight corresponding to the frame when possible;
 - preserve byte order exactly;
-- distinguish observation from interpretation.
+- include the exact model and BLE local name;
+- include the displayed weight associated with the frame;
+- report status and mode bytes when possible;
+- distinguish observed bytes from interpretations.
 
 ## Code contributions
 
-Keep recovered facts, experimentally confirmed behavior, and hypotheses clearly separated in comments and documentation. Do not add proprietary binaries or decompiled proprietary source code to this repository.
+Keep these categories separate in comments/docs:
 
-Original contributions to this repository are made under the MIT License unless explicitly stated otherwise.
+- **CONFIRMED** direct PS7002/app behavior;
+- **SOURCE-MAPPED** meanings established by historical app source;
+- **RECOVERED** numerical behavior reconstructed from native code;
+- **OPEN** protocol or compatibility questions.
+
+Do not add proprietary binaries or decompiled proprietary source code to this repository.
+
+Original contributions are made under the MIT License unless explicitly stated otherwise.
