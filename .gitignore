@@ -1,0 +1,32 @@
+# Arduino / PlatformIO build products
+build/
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+.idea/
+*.elf
+*.bin
+*.hex
+*.map
+*.o
+*.a
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Captures and local experiment output
+captures/
+*.log
+*.pcap
+*.pcapng
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
